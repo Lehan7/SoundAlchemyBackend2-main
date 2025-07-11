@@ -9,7 +9,7 @@ import { google } from 'googleapis';
 import { authenticate } from '@google-cloud/local-auth';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -295,7 +295,7 @@ app.get('/api/health', async (req, res) => {
   try {
     // Try a real Firestore operation (get a doc that may not exist)
     const testDoc = doc(db, 'healthCheck', 'test');
-    await updateDoc(testDoc, { checkedAt: serverTimestamp() });
+    await setDoc(testDoc, { checkedAt: serverTimestamp() }, { merge: true });
     firebaseStatus.status = 'online';
   } catch (err) {
     firebaseStatus.status = 'offline';
