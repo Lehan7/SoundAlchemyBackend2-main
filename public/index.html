@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #e2e3e5; color: #383d41; }
+        .log { 
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        input[type="file"] { margin: 10px 0; }
+        #serverLogs { 
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .service-status {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .status-online { background-color: #28a745; }
+        .status-offline { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .details {
+            margin-left: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .details-section {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .details-section.online {
+            border-left: 4px solid #28a745;
+        }
+        .details-section.error {
+            border-left: 4px solid #dc3545;
+        }
+        .details-section.unknown {
+            border-left: 4px solid #ffc107;
+        }
+        .details-section pre {
+            margin: 5px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .status-container {
+            margin-bottom: 20px;
+        }
+        .status-row {
+            margin: 10px 0;
+        }
+        .service-label {
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 150px;
+            display: inline-block;
+        }
+        .status-value {
+            min-width: 100px;
+            display: inline-block;
+        }
+        .button-group {
+            margin: 15px 0;
+        }
+        .button-group button {
+            margin-right: 10px;
+        }
+        .primary {
+            background-color: #007bff;
+        }
+        .upload-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .file-input {
+            flex: 2;
+        }
+        .text-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .upload-status {
+            margin-top: 10px;
+        }
+        .log-controls {
+            margin-bottom: 10px;
+        }
+        .server-logs {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>Server Test Page</h1>
+
+    <div class="section">
+        <h2>System Status</h2>
+        <div class="status-container">
+            <div class="status-row">
+                <div class="service-status">
+                    <div id="serverIndicator" class="status-indicator"></div>
+                    <span class="service-label">Server Status:</span>
+                    <span id="serverStatus" class="status-value">Checking...</span>
+                </div>
+            </div>
+            <div class="status-row">
+                <div class="service-status">
+                    <div id="firebaseIndicator" class="status-indicator"></div>
+                    <span class="service-label">Firebase Status:</span>
+                    <span id="firebaseStatus" class="status-value">Checking...</span>
+                </div>
+            </div>
+            <div class="status-row">
+                <div class="service-status">
+                    <div id="driveIndicator" class="status-indicator"></div>
+                    <span class="service-label">Google Drive Status:</span>
+                    <span id="driveStatus" class="status-value">Checking...</span>
+                </div>
+            </div>
+        </div>
+        <div id="statusDetails" class="status-details"></div>
+        <div class="button-group">
+            <button onclick="checkHealth()" class="primary">Refresh Status</button>
+            <button onclick="checkQuickStatus()">Quick Check</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>File Upload Test</h2>
+        <div class="upload-container">
+            <input type="file" id="fileInput" accept="image/*" class="file-input">
+            <input type="text" id="userIdInput" placeholder="Enter user ID" value="testUser123" class="text-input">
+            <button onclick="uploadFile()" id="uploadButton" class="primary">Upload File</button>
+        </div>
+        <div id="uploadStatus" class="upload-status"></div>
+    </div>
+
+    <div class="section">
+        <h2>WebSocket Status</h2>
+        <div id="websocketStatusContainer">
+            <div id="websocketStatusMessage">Checking...</div>
+            <div id="websocketDetails" style="display:none;">
+                <div><strong>Connected Users:</strong> <span id="wsConnectedUsers"></span></div>
+                <div><strong>Total Connections:</strong> <span id="wsTotalConnections"></span></div>
+                <div><strong>Timestamp:</strong> <span id="wsTimestamp"></span></div>
+            </div>
+        </div>
+        <div class="button-group">
+            <button onclick="checkWebSocketStatus()" class="primary">Refresh WebSocket Status</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Server Logs</h2>
+        <div class="log-controls">
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+        <div id="serverLogs" class="server-logs"></div>
+    </div>
+
+    <script>
+        let isUploading = false;
+
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('serverLogs');
+            const time = new Date().toLocaleTimeString();
+            const logClass = type === 'error' ? 'error' : 
+                           type === 'success' ? 'success' : 
+                           type === 'warning' ? 'warning' : 'info';
+            logs.innerHTML = `<div class="log ${logClass}">${time} - ${message}</div>` + logs.innerHTML;
+        }
+
+        function clearLogs() {
+            document.getElementById('serverLogs').innerHTML = '';
+            addLog('Logs cleared');
+        }
+
+        function updateServiceStatus(service, status, details = '') {
+            const indicator = document.getElementById(`${service}Indicator`);
+            const statusElement = document.getElementById(`${service}Status`);
+            
+            if (!indicator || !statusElement) {
+                console.error(`Could not find elements for service: ${service}`);
+                return;
+            }
+
+            // Normalize status
+            let normalizedStatus = (status || 'unknown').toLowerCase();
+            let statusText = '';
+            let statusClass = '';
+
+            switch(normalizedStatus) {
+                case 'online':
+                case 'connected':
+                    statusClass = 'status-online';
+                    statusText = 'Online';
+                    break;
+                case 'offline':
+                case 'error':
+                    statusClass = 'status-offline';
+                    statusText = status === 'error' ? 'Error' : 'Offline';
+                    break;
+                case 'checking':
+                    statusClass = 'status-warning';
+                    statusText = 'Checking...';
+                    break;
+                case 'unknown':
+                    statusClass = 'status-warning';
+                    statusText = 'Unknown';
+                    break;
+                default:
+                    statusClass = 'status-warning';
+                    statusText = status || 'Unknown';
+            }
+            
+            indicator.className = `status-indicator ${statusClass}`;
+            statusElement.textContent = statusText;
+            
+            if (details) {
+                const detailsElement = document.getElementById('statusDetails');
+                if (detailsElement) {
+                    const detailsHtml = `<pre class="${normalizedStatus === 'error' ? 'error' : 'info'}">${details}</pre>`;
+                    detailsElement.innerHTML += detailsHtml;
+                }
+            }
+        }
+
+        async function checkQuickStatus() {
+            addLog('Performing quick status check...');
+            
+            // Set all services to checking state
+            ['server', 'firebase', 'googleDrive'].forEach(service => {
+                updateServiceStatus(service, 'checking');
+            });
+            
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update individual service statuses
+                    updateServiceStatus('server', data.services.server);
+                    updateServiceStatus('firebase', data.services.firebase);
+                    updateServiceStatus('googleDrive', data.services.googleDrive);
+                    
+                    addLog(`Quick status check: All services checked`, 'success');
+                } else {
+                    throw new Error(data.error || 'Status check failed');
+                }
+            } catch (error) {
+                updateServiceStatus('server', 'error');
+                addLog(`Quick status check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkHealth() {
+            document.getElementById('statusDetails').innerHTML = '';
+            addLog('Performing comprehensive health check...');
+            
+            // Set all services to checking state
+            ['server', 'firebase', 'googleDrive'].forEach(service => {
+                updateServiceStatus(service, 'checking');
+            });
+            
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update server status
+                    updateServiceStatus('server', data.server.status, 
+                        `Uptime: ${data.server.uptime}\nPort: ${data.server.port}`);
+
+                    // Update Firebase status
+                    if (data.firebase) {
+                        updateServiceStatus('firebase', data.firebase.status,
+                            `Project: ${data.firebase.config.projectId}\n` +
+                            `Database: ${data.firebase.database || 'N/A'}\n` +
+                            (data.firebase.error ? `Error: ${data.firebase.error}` : ''));
+                    }
+
+                    // Update Google Drive status
+                    if (data.googleDrive) {
+                        updateServiceStatus('drive', data.googleDrive.status,
+                            `API: ${data.googleDrive.api || 'N/A'}\n` +
+                            `Folder: ${data.googleDrive.parentFolderId}\n` +
+                            (data.googleDrive.error ? `Error: ${data.googleDrive.error}` : ''));
+                    }
+
+                    addLog('Health check completed successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Health check failed');
+                }
+            } catch (error) {
+                ['server', 'firebase', 'googleDrive'].forEach(service => {
+                    updateServiceStatus(service, 'error');
+                });
+                addLog(`Health check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function uploadFile() {
+            if (isUploading) return;
+
+            const fileInput = document.getElementById('fileInput');
+            const userId = document.getElementById('userIdInput').value.trim();
+            const uploadButton = document.getElementById('uploadButton');
+            
+            if (!fileInput.files.length) {
+                addLog('Please select a file first', 'warning');
+                return;
+            }
+
+            if (!userId) {
+                addLog('Please enter a user ID', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('userId', userId);
+
+            isUploading = true;
+            uploadButton.disabled = true;
+            addLog('Starting file upload...');
+            
+            try {
+                const response = await fetch('/api/upload-profile-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    addLog(`File uploaded successfully! URL: ${data.imageUrl}`, 'success');
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                addLog(`Upload failed: ${error.message}`, 'error');
+            } finally {
+                isUploading = false;
+                uploadButton.disabled = false;
+            }
+        }
+
+        async function checkWebSocketStatus() {
+            const statusMsg = document.getElementById('websocketStatusMessage');
+            const details = document.getElementById('websocketDetails');
+            statusMsg.textContent = 'Checking...';
+            details.style.display = 'none';
+            try {
+                const response = await fetch('/api/websocket-status');
+                const data = await response.json();
+                if (response.ok && data.status === 'running') {
+                    statusMsg.textContent = 'WebSocket server is running.';
+                    document.getElementById('wsConnectedUsers').textContent = data.connectedUsers.length > 0 ? data.connectedUsers.join(', ') : 'None';
+                    document.getElementById('wsTotalConnections').textContent = data.totalConnections;
+                    document.getElementById('wsTimestamp').textContent = data.timestamp;
+                    details.style.display = 'block';
+                } else {
+                    statusMsg.textContent = 'WebSocket server is not running.';
+                }
+            } catch (error) {
+                statusMsg.textContent = 'Error fetching WebSocket status: ' + error.message;
+            }
+        }
+
+        // Initial health check
+        checkHealth();
+        checkWebSocketStatus();
+    </script>
+</body>
+</html> 
