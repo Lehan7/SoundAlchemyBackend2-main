@@ -208,7 +208,7 @@ let driveClient = null;
 async function initializeGoogleDrive() {
   try {
     const auth = new google.auth.GoogleAuth({
-      keyFile: path.join(process.cwd(), 'credentialsound.json'),
+      keyFile: path.join(process.cwd(), 'soundalchemyusersphoto-aa1ea88d5d66.json'),
       scopes: ['https://www.googleapis.com/auth/drive.file'],
     });
     
